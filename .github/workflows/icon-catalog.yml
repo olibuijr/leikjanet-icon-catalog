@@ -1,0 +1,30 @@
+# Compiles the App Store icon catalog (Assets.car) with Apple's actool, which only runs on macOS.
+# Pushed to a tiny private repo by tools/icon-catalog/run.sh; only AppIcon.png goes there.
+name: icon-catalog
+on: [push, workflow_dispatch]
+jobs:
+  actool:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Assets.xcassets
+        run: |
+          mkdir -p Assets.xcassets/AppIcon.appiconset
+          cp AppIcon.png Assets.xcassets/AppIcon.appiconset/AppIcon.png
+          cat > Assets.xcassets/Contents.json <<'J'
+          {"info":{"author":"xcode","version":1}}
+          J
+          cat > Assets.xcassets/AppIcon.appiconset/Contents.json <<'J'
+          {"images":[{"filename":"AppIcon.png","idiom":"universal","platform":"ios","size":"1024x1024"}],"info":{"author":"xcode","version":1}}
+          J
+      - name: actool
+        run: |
+          mkdir -p out
+          xcrun actool Assets.xcassets --compile out --platform iphoneos --minimum-deployment-target 17.0 \
+            --app-icon AppIcon --target-device iphone --target-device ipad \
+            --output-partial-info-plist out/partial-Info.plist --output-format human-readable-text
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: icon-catalog
+          path: out/
